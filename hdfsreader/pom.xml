@@ -117,6 +117,10 @@
                     <artifactId>guava</artifactId>
                 </exclusion>
                 <exclusion>
+                    <groupId>org.apache.avro</groupId>
+                    <artifactId>avro</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>slf4j-api</groupId>
                     <artifactId>org.slf4j</artifactId>
                 </exclusion>
