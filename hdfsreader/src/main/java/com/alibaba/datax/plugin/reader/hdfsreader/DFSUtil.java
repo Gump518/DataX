@@ -734,9 +734,11 @@ public class DFSUtil {
         if (columnIndexMax >= 0) {
             JobConf conf = new JobConf(hadoopConf);
             Path parquetFilePath = new Path(sourceParquestFilePath);
+            GenericData decimalSupport = new GenericData();
+            decimalSupport.addLogicalTypeConversion(new Conversions.DecimalConversion());
             try (ParquetReader<GenericData.Record> reader = AvroParquetReader
                     .<GenericData.Record>builder(parquetFilePath)
-                    .withDataModel(new GenericData())
+                    .withDataModel(decimalSupport)
                     .withConf(conf)
                     .build()) {
                 GenericData.Record gRecord = reader.read();

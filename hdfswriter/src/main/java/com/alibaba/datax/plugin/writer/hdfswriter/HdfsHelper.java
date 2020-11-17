@@ -608,18 +608,27 @@ public  class HdfsHelper {
                 + "\"fields\": [";
 
         for (Configuration column : columns) {
+            if (column.getString("type").toUpperCase().contains("DECIMAL(")) {
+                strschema += " {\"name\": \"" + column.getString("name")
+                        + "\", \"type\": {\"type\": \"fixed\", \"size\":16, \"logicalType\": \"decimal\", \"name\": \"decimal\", \"precision\": "
+                        + getDecimalprec(column.getString("type")) + ", \"scale\":"
+                        + getDecimalscale(column.getString("type")) + "}},";
+            }
+            else {
                 strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
                         + column.getString("type") + "\"},";
+            }
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
         Schema.Parser parser = new Schema.Parser().setValidate(true);
         Schema parSchema = parser.parse(strschema);
         org.apache.parquet.hadoop.metadata.CompressionCodecName codecName = CompressionCodecName.fromConf(compress);
-
+        GenericData decimalSupport = new GenericData();
+        decimalSupport.addLogicalTypeConversion(new Conversions.DecimalConversion());
         try {
             ParquetWriter<GenericRecord> writer = AvroParquetWriter
                     .<GenericRecord>builder(path)
-                    .withDataModel(new GenericData())
+                    .withDataModel(decimalSupport)
                     .withCompressionCodec(codecName)
                     .withSchema(parSchema)
                     .build();
@@ -652,6 +661,9 @@ public  class HdfsHelper {
                     String rowData = column.getRawData().toString();
                     String colname = columnsConfiguration.get(i).getString("name");
                     String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
+                    if (typename.contains("DECIMAL(")) {
+                        typename = "DECIMAL";
+                    }
                     SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
                     //根据writer端类型配置做类型转换
                     try {

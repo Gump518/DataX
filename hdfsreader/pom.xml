@@ -35,7 +35,17 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.prestosql.hadoop</groupId>
+            <artifactId>hadoop-apache</artifactId>
+            <version>2.7.4-6</version>
+        </dependency>
 
+        <dependency>
+            <groupId>io.prestosql.hive</groupId>
+            <artifactId>hive-apache</artifactId>
+            <version>3.1.2-1</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
@@ -93,44 +103,6 @@
             <groupId>com.alibaba.datax</groupId>
             <artifactId>plugin-unstructured-storage-util</artifactId>
             <version>${datax-project-version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>1.10.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>slf4j-api</groupId>
-                    <artifactId>org.slf4j</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-avro</artifactId>
-            <version>1.11.1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>slf4j-api</groupId>
-                    <artifactId>org.slf4j</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 
