@@ -851,10 +851,13 @@ public class DFSUtil {
 
     private boolean isParquetFile(Path file, FSDataInputStream in) {
         try {
-            GroupReadSupport readSupport = new GroupReadSupport();
-            ParquetReader.Builder<Group> reader = ParquetReader.builder(readSupport, file);
-            ParquetReader<Group> build = reader.build();
-            if (build.read() != null) {
+            JobConf conf = new JobConf(hadoopConf);
+            ParquetReader<GenericData.Record> reader = AvroParquetReader
+                    .<GenericData.Record>builder(file)
+                    .withDataModel(new GenericData())
+                    .withConf(conf)
+                    .build();
+            if (reader.read() != null) {
                 return true;
             }
         } catch (Exception e) {
