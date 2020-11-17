@@ -136,18 +136,16 @@ public  class HdfsHelper {
     }
 
     /**
-     * 获取以fileName__ 开头的文件列表
+     * 获取以指定目录下的所有fileName开头的文件
      * @param dir
      * @param fileName
      * @return
      */
     public Path[] hdfsDirList(String dir,String fileName){
         Path path = new Path(dir);
-        Path[] files = null;
-        String filterFileName = fileName + "__*";
+        Path[] files;
         try {
-            PathFilter pathFilter = new GlobFilter(filterFileName);
-            FileStatus[] status = fileSystem.listStatus(path,pathFilter);
+            FileStatus[] status = fileSystem.listStatus(path);
             files = new Path[status.length];
             for(int i=0;i<status.length;i++){
                 files[i] = status[i].getPath();
