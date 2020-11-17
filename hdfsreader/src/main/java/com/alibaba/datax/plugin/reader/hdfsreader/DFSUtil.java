@@ -500,7 +500,8 @@ public class DFSUtil {
         Path path = new Path(filePath);
         try {
             Reader reader = OrcFile.createReader(path, OrcFile.readerOptions(hadoopConf));
-            return reader.getTypes().get(0).getSubtypesCount();
+//            return reader.getTypes().get(0).getSubtypesCount();
+            return reader.getSchema().getChildren().size();
         } catch (IOException e) {
             String message = "读取orcfile column列数失败，请联系系统管理员";
             throw DataXException.asDataXException(HdfsReaderErrorCode.READ_FILE_ERROR, message);
@@ -857,6 +858,7 @@ public class DFSUtil {
                 return true;
             }
         } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
         }
         return false;
