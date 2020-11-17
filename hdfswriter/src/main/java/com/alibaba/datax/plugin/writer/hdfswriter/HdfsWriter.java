@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import parquet.hadoop.metadata.CompressionCodecName;
 
 import java.util.*;
 
@@ -81,10 +82,10 @@ public class HdfsWriter extends Writer {
             //writeMode check
             this.writeMode = this.writerSliceConfig.getNecessaryValue(Key.WRITE_MODE, HdfsWriterErrorCode.REQUIRED_VALUE);
             writeMode = writeMode.toLowerCase().trim();
-            Set<String> supportedWriteModes = Sets.newHashSet("append", "nonconflict");
+            Set<String> supportedWriteModes = Sets.newHashSet("append", "nonconflict", "overwrite");
             if (!supportedWriteModes.contains(writeMode)) {
                 throw DataXException.asDataXException(HdfsWriterErrorCode.ILLEGAL_VALUE,
-                        String.format("仅支持append, nonConflict两种模式, 不支持您配置的 writeMode 模式 : [%s]",
+                        String.format("仅支持append, nonConflict, overwrite三种模式, 不支持您配置的 writeMode 模式 : [%s]",
                                 writeMode));
             }
             this.writerSliceConfig.set(Key.WRITE_MODE, writeMode);
@@ -125,7 +126,18 @@ public class HdfsWriter extends Writer {
                                         compress));
                     }
                 }
-
+            } else if(fileType.equalsIgnoreCase("PARQUET")) {
+                if ("NONE".equals(compress)) {
+                    compress = "UNCOMPRESSED";
+                }
+                try {
+                    CompressionCodecName.fromConf(compress);
+                }
+                catch (Exception e) {
+                    throw DataXException.asDataXException(HdfsWriterErrorCode.ILLEGAL_VALUE,
+                            String.format("目前PARQUET 格式仅支持 %s 压缩, 不支持您配置的 compress 模式 : [%s]",
+                                    Arrays.toString(CompressionCodecName.values()), compress));
+                }
             }
             //Kerberos check
             Boolean haveKerberos = this.writerSliceConfig.getBool(Key.HAVE_KERBEROS, false);
@@ -188,7 +200,13 @@ public class HdfsWriter extends Writer {
 
         @Override
         public void post() {
+            Path[] existFilePaths = hdfsHelper.hdfsDirList(path, null);
+            if ("overwrite".equals(writeMode)) {
+                hdfsHelper.deleteFiles(existFilePaths, false);
+            }
             hdfsHelper.renameFile(tmpFiles, endFiles);
+            // 删除临时目录
+            hdfsHelper.deleteFiles(existFilePaths, true);
         }
 
         @Override
@@ -362,6 +380,10 @@ public class HdfsWriter extends Writer {
             }else if(fileType.equalsIgnoreCase("ORC")){
                 //写ORC FILE
                 hdfsHelper.orcFileStartWrite(lineReceiver,this.writerSliceConfig, this.fileName,
+                        this.getTaskPluginCollector());
+            }else if(fileType.equalsIgnoreCase("PARQUET")) {
+                //写PARQUET FILE
+                hdfsHelper.parquetFileStartWrite(lineReceiver,this.writerSliceConfig, this.fileName,
                         this.getTaskPluginCollector());
             }
 

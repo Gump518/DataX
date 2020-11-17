@@ -9,6 +9,11 @@ import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
+import org.apache.avro.Conversions;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.fs.*;
@@ -22,11 +27,18 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.parquet.avro.AvroParquetWriter;
+import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import parquet.hadoop.ParquetReader;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public  class HdfsHelper {
     public static final Logger LOG = LoggerFactory.getLogger(HdfsWriter.Job.class);
@@ -555,5 +567,154 @@ public  class HdfsHelper {
         }
         transportResult.setLeft(recordList);
         return transportResult;
+    }
+
+    public void deleteFiles(Path[] paths, boolean delDotFile) {
+        String fname;
+        for (Path path : paths) {
+            LOG.info("delete file [{}], include dotfile({}).", path, delDotFile);
+            try {
+                fname = path.getName();
+                // 如果只要删除点开头的文件
+                if (delDotFile) {
+                    if (fname.startsWith(".")) {
+                        fileSystem.delete(path, true);
+                    }
+                } else {
+                    // 保留dot文件，其他删除
+                    if (!fname.startsWith(("."))) {
+                        fileSystem.delete(path, true);
+                    }
+                }
+            } catch (IOException e) {
+                LOG.error("删除文件[{}]时发生IO异常,请检查您的网络是否正常！", path);
+                throw DataXException.asDataXException(HdfsWriterErrorCode.CONNECT_HDFS_IO_ERROR, e);
+            }
+        }
+    }
+
+    public void parquetFileStartWrite(RecordReceiver lineReceiver, Configuration config, String fileName,
+                                      TaskPluginCollector taskPluginCollector) {
+        List<Configuration> columns = config.getListConfiguration(Key.COLUMN);
+        String compress = config.getString(Key.COMPRESS, "UNCOMPRESSED").toUpperCase().trim();
+        if ("NONE".equals(compress)) {
+            compress = "UNCOMPRESSED";
+        }
+
+        Path path = new Path(fileName);
+        String strschema = "{"
+                + "\"type\": \"record\"," //Must be set as record
+                + "\"name\": \"record\"," //Not used in Parquet, can put anything
+                + "\"fields\": [";
+
+        for (Configuration column : columns) {
+                strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
+                        + column.getString("type") + "\"},";
+        }
+        strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
+        Schema.Parser parser = new Schema.Parser().setValidate(true);
+        Schema parSchema = parser.parse(strschema);
+        org.apache.parquet.hadoop.metadata.CompressionCodecName codecName = CompressionCodecName.fromConf(compress);
+
+        try {
+            ParquetWriter<GenericRecord> writer = AvroParquetWriter
+                    .<GenericRecord>builder(path)
+                    .withDataModel(new GenericData())
+                    .withCompressionCodec(codecName)
+                    .withSchema(parSchema)
+                    .build();
+
+            GenericRecordBuilder builder = new GenericRecordBuilder(parSchema);
+            com.alibaba.datax.common.element.Record record;
+            while ((record = lineReceiver.getFromReader()) != null) {
+                GenericRecord transportResult = transportParRecord(record, columns, taskPluginCollector, builder);
+                writer.write(transportResult);
+            }
+            writer.close();
+        }
+        catch (Exception e) {
+            LOG.error("写文件文件[{}]时发生IO异常,请检查您的网络是否正常！", fileName);
+            deleteDir(path.getParent());
+            throw DataXException.asDataXException(HdfsWriterErrorCode.Write_FILE_IO_ERROR, e);
+        }
+    }
+
+    public static GenericRecord transportParRecord(
+            com.alibaba.datax.common.element.Record record, List<Configuration> columnsConfiguration,
+            TaskPluginCollector taskPluginCollector, GenericRecordBuilder builder) {
+
+        int recordLength = record.getColumnNumber();
+        if (0 != recordLength) {
+            Column column;
+            for (int i = 0; i < recordLength; i++) {
+                column = record.getColumn(i);
+                if (null != column.getRawData()) {
+                    String rowData = column.getRawData().toString();
+                    String colname = columnsConfiguration.get(i).getString("name");
+                    String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
+                    SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
+                    //根据writer端类型配置做类型转换
+                    try {
+                        switch (columnType) {
+                            case INT:
+                            case INTEGER:
+                                builder.set(colname, Integer.valueOf(rowData));
+                                break;
+                            case LONG:
+                                builder.set(colname, column.asLong());
+                                break;
+                            case FLOAT:
+                                builder.set(colname, Float.valueOf(rowData));
+                                break;
+                            case DOUBLE:
+                                builder.set(colname, column.asDouble());
+                                break;
+                            case STRING:
+                                builder.set(colname, column.asString());
+                                break;
+                            case DECIMAL:
+                                builder.set(colname, column.asBigDecimal());
+                                break;
+                            case BOOLEAN:
+                                builder.set(colname, column.asBoolean());
+                                break;
+                            case BINARY:
+                                builder.set(colname, column.asBytes());
+                                break;
+                            default:
+                                throw DataXException
+                                        .asDataXException(
+                                                HdfsWriterErrorCode.ILLEGAL_VALUE,
+                                                String.format(
+                                                        "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%s]. 请修改表中该字段的类型或者不同步该字段.",
+                                                        columnsConfiguration.get(i).getString(Key.NAME),
+                                                        columnsConfiguration.get(i).getString(Key.TYPE)));
+                        }
+                    } catch (Exception e) {
+                        // warn: 此处认为脏数据
+                        String message = String.format(
+                                "字段类型转换错误：目标字段为[%s]类型，实际字段值为[%s].",
+                                columnsConfiguration.get(i).getString(Key.TYPE), column.getRawData());
+                        taskPluginCollector.collectDirtyRecord(record, message);
+                        break;
+                    }
+                }
+            }
+        }
+        return builder.build();
+    }
+
+    public String getDecimalprec(String type) {
+        String regEx = "[^0-9]";
+        Pattern p = Pattern.compile(regEx);
+        Matcher m = p.matcher(type);
+        return m.replaceAll(" ").trim().split(" ")[0];
+    }
+
+    public String getDecimalscale(String type) {
+        String regEx = "[^0-9]";
+        Pattern p = Pattern.compile(regEx);
+        Matcher m = p.matcher(type);
+        return m.replaceAll(" ").trim().split(" ")[1];
     }
 }

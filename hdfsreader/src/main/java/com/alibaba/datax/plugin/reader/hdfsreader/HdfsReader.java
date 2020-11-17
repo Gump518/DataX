@@ -5,6 +5,7 @@ import com.alibaba.datax.common.plugin.RecordSender;
 import com.alibaba.datax.common.spi.Reader;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.unstructuredstorage.reader.UnstructuredStorageReaderUtil;
+import org.apache.avro.generic.GenericData;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -75,15 +76,15 @@ public class HdfsReader extends Reader {
                     }
                 }
             }
-
             specifiedFileType = this.readerOriginConfig.getNecessaryValue(Key.FILETYPE, HdfsReaderErrorCode.REQUIRED_VALUE);
             if( !specifiedFileType.equalsIgnoreCase(Constant.ORC) &&
                     !specifiedFileType.equalsIgnoreCase(Constant.TEXT) &&
                     !specifiedFileType.equalsIgnoreCase(Constant.CSV) &&
                     !specifiedFileType.equalsIgnoreCase(Constant.SEQ) &&
-                    !specifiedFileType.equalsIgnoreCase(Constant.RC)){
-                String message = "HdfsReader插件目前支持ORC, TEXT, CSV, SEQUENCE, RC五种格式的文件," +
-                        "请将fileType选项的值配置为ORC, TEXT, CSV, SEQUENCE 或者 RC";
+                    !specifiedFileType.equalsIgnoreCase(Constant.RC) &&
+                    !specifiedFileType.equalsIgnoreCase(Constant.PARQUET) ){
+                String message = "HdfsReader插件目前支持ORC, TEXT, CSV, SEQUENCE, RC, PARQUET六种格式的文件," +
+                        "请将fileType选项的值配置为ORC, TEXT, CSV, SEQUENCE, PARQUET 或者 RC";
                 throw DataXException.asDataXException(HdfsReaderErrorCode.FILE_TYPE_ERROR, message);
             }
 
@@ -273,10 +274,13 @@ public class HdfsReader extends Reader {
                 }else if(specifiedFileType.equalsIgnoreCase(Constant.RC)){
 
                     dfsUtil.rcFileStartRead(sourceFile, this.taskConfig, recordSender, this.getTaskPluginCollector());
+                }else if(specifiedFileType.equalsIgnoreCase(Constant.PARQUET)) {
+
+                    dfsUtil.parquetFileStartRead(sourceFile, this.taskConfig, recordSender, this.getTaskPluginCollector());
                 }else {
 
-                    String message = "HdfsReader插件目前支持ORC, TEXT, CSV, SEQUENCE, RC五种格式的文件," +
-                            "请将fileType选项的值配置为ORC, TEXT, CSV, SEQUENCE 或者 RC";
+                    String message = "HdfsReader插件目前支持ORC, TEXT, CSV, SEQUENCE, RC, PARQUET六种格式的文件," +
+                            "请将fileType选项的值配置为ORC, TEXT, CSV, SEQUENCE，PARQUET或者 RC";
                     throw DataXException.asDataXException(HdfsReaderErrorCode.FILE_TYPE_UNSUPPORT, message);
                 }
 
