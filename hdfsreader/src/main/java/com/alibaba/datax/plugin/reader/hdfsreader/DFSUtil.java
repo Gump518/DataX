@@ -564,7 +564,7 @@ public class DFSUtil {
             }
 
         } catch (Exception e) {
-            String message = String.format("检查文件[%s]类型失败，目前支持ORC,SEQUENCE,RCFile,TEXT,CSV五种格式的文件," +
+            String message = String.format("检查文件[%s]类型失败，目前支持ORC,SEQUENCE,RCFile,TEXT,CSV, PARQUET六种格式的文件," +
                     "请检查您文件类型和文件是否正确。", filepath);
             LOG.error(message);
             throw DataXException.asDataXException(HdfsReaderErrorCode.READ_FILE_ERROR, message, e);
@@ -701,7 +701,7 @@ public class DFSUtil {
 
     /**
      *  Parquet File
-     * @param sourceOrcFilePath
+     * @param sourceParquestFilePath
      * @param readerSliceConfig
      * @param recordSender
      * @param taskPluginCollector
@@ -846,7 +846,7 @@ public class DFSUtil {
             if (build.read() != null) {
                 return true;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
         }
         return false;
