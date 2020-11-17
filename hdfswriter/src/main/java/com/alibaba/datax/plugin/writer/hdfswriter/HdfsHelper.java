@@ -621,6 +621,7 @@ public  class HdfsHelper {
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
         Schema.Parser parser = new Schema.Parser().setValidate(true);
+        parser.setValidateDefaults(false);
         Schema parSchema = parser.parse(strschema);
         org.apache.parquet.hadoop.metadata.CompressionCodecName codecName = CompressionCodecName.fromConf(compress);
         GenericData decimalSupport = new GenericData();
@@ -657,57 +658,60 @@ public  class HdfsHelper {
             Column column;
             for (int i = 0; i < recordLength; i++) {
                 column = record.getColumn(i);
-                String colname = columnsConfiguration.get(i).getString("name");
-                String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
-                if (typename.contains("DECIMAL(")) {
-                    typename = "DECIMAL";
-                }
-                SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
-                String rowData = column.getRawData() == null ? "-99999" : column.getRawData().toString();
-                //根据writer端类型配置做类型转换
-                try {
-                    switch (columnType) {
-                        case INT:
-                        case INTEGER:
-                            builder.set(colname, Integer.valueOf(rowData));
-                            break;
-                        case LONG:
-                            builder.set(colname, column.asLong());
-                            break;
-                        case FLOAT:
-                            builder.set(colname, Float.valueOf(rowData));
-                            break;
-                        case DOUBLE:
-                            builder.set(colname, column.asDouble());
-                            break;
-                        case STRING:
-                            builder.set(colname, column.asString());
-                            break;
-                        case DECIMAL:
-                            builder.set(colname, column.asBigDecimal());
-                            break;
-                        case BOOLEAN:
-                            builder.set(colname, column.asBoolean());
-                            break;
-                        case BINARY:
-                            builder.set(colname, column.asBytes());
-                            break;
-                        default:
-                            throw DataXException
-                                    .asDataXException(
-                                            HdfsWriterErrorCode.ILLEGAL_VALUE,
-                                            String.format(
-                                                    "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%s]. 请修改表中该字段的类型或者不同步该字段.",
-                                                    columnsConfiguration.get(i).getString(Key.NAME),
-                                                    columnsConfiguration.get(i).getString(Key.TYPE)));
+                if(column.getRawData() != null) {
+                    String colname = columnsConfiguration.get(i).getString("name");
+                    String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
+                    if (typename.contains("DECIMAL(")) {
+                        typename = "DECIMAL";
                     }
-                } catch (Exception e) {
-                    // warn: 此处认为脏数据
-                    String message = String.format(
-                            "字段类型转换错误：目标字段为[%s]类型，实际字段值为[%s].",
-                            columnsConfiguration.get(i).getString(Key.TYPE), column.getRawData());
-                    taskPluginCollector.collectDirtyRecord(record, message);
-                    break;
+                    SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
+                    String rowData = column.getRawData().toString();
+
+                    //根据writer端类型配置做类型转换
+                    try {
+                        switch (columnType) {
+                            case INT:
+                            case INTEGER:
+                                builder.set(colname, Integer.valueOf(rowData));
+                                break;
+                            case LONG:
+                                builder.set(colname, column.asLong());
+                                break;
+                            case FLOAT:
+                                builder.set(colname, Float.valueOf(rowData));
+                                break;
+                            case DOUBLE:
+                                builder.set(colname, column.asDouble());
+                                break;
+                            case STRING:
+                                builder.set(colname, column.asString());
+                                break;
+                            case DECIMAL:
+                                builder.set(colname, column.asBigDecimal());
+                                break;
+                            case BOOLEAN:
+                                builder.set(colname, column.asBoolean());
+                                break;
+                            case BINARY:
+                                builder.set(colname, column.asBytes());
+                                break;
+                            default:
+                                throw DataXException
+                                        .asDataXException(
+                                                HdfsWriterErrorCode.ILLEGAL_VALUE,
+                                                String.format(
+                                                        "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%s]. 请修改表中该字段的类型或者不同步该字段.",
+                                                        columnsConfiguration.get(i).getString(Key.NAME),
+                                                        columnsConfiguration.get(i).getString(Key.TYPE)));
+                        }
+                    } catch (Exception e) {
+                        // warn: 此处认为脏数据
+                        String message = String.format(
+                                "字段类型转换错误：目标字段为[%s]类型，实际字段值为[%s].",
+                                columnsConfiguration.get(i).getString(Key.TYPE), column.getRawData());
+                        taskPluginCollector.collectDirtyRecord(record, message);
+                        break;
+                    }
                 }
             }
         }
