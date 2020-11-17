@@ -708,7 +708,7 @@ public class DFSUtil {
      */
     public void parquetFileStartRead(String sourceParquestFilePath, Configuration readerSliceConfig,
                                      RecordSender recordSender, TaskPluginCollector taskPluginCollector) {
-        LOG.info("Start Read orcfile [{}].", sourceParquestFilePath);
+        LOG.info("Start Read Parquet File [{}].", sourceParquestFilePath);
         List<ColumnEntry> column = UnstructuredStorageReaderUtil
                 .getListColumnEntry(readerSliceConfig, com.alibaba.datax.plugin.unstructuredstorage.reader.Key.COLUMN);
         String nullFormat = readerSliceConfig.getString(com.alibaba.datax.plugin.unstructuredstorage.reader.Key.NULL_FORMAT);
