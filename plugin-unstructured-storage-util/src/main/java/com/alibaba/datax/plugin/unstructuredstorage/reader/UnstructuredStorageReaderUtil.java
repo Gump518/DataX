@@ -397,7 +397,7 @@ public class UnstructuredStorageReaderUtil {
 					}
 					Type type = Type.valueOf(columnType.toUpperCase());
 					// it's all ok if nullFormat is null
-					if (columnValue.equals(nullFormat)) {
+					if (columnValue.equals(nullFormat) || columnValue.equals("\\N")) {
 						columnValue = null;
 					}
 					switch (type) {
