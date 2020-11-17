@@ -862,7 +862,6 @@ public class DFSUtil {
             }
 
         } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
         } finally {
             if(reader != null) {
