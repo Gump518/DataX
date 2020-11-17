@@ -500,8 +500,7 @@ public class DFSUtil {
         Path path = new Path(filePath);
         try {
             Reader reader = OrcFile.createReader(path, OrcFile.readerOptions(hadoopConf));
-//            return reader.getTypes().get(0).getSubtypesCount();
-            return reader.getSchema().getChildren().size();
+            return reader.getTypes().get(0).getSubtypesCount();
         } catch (IOException e) {
             String message = "读取orcfile column列数失败，请联系系统管理员";
             throw DataXException.asDataXException(HdfsReaderErrorCode.READ_FILE_ERROR, message);
