@@ -657,10 +657,12 @@ public  class HdfsHelper {
             Column column;
             for (int i = 0; i < recordLength; i++) {
                 column = record.getColumn(i);
+
+                String colname = columnsConfiguration.get(i).getString("name");
+                String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
+
                 if (null != column.getRawData()) {
                     String rowData = column.getRawData().toString();
-                    String colname = columnsConfiguration.get(i).getString("name");
-                    String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
                     if (typename.contains("DECIMAL(")) {
                         typename = "DECIMAL";
                     }
@@ -710,6 +712,8 @@ public  class HdfsHelper {
                         taskPluginCollector.collectDirtyRecord(record, message);
                         break;
                     }
+                } else {
+                    builder.set(colname, null);
                 }
             }
         }
