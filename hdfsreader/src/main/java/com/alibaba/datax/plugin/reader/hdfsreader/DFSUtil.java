@@ -850,9 +850,10 @@ public class DFSUtil {
     }
 
     private boolean isParquetFile(Path file, FSDataInputStream in) {
+        ParquetReader<GenericData.Record> reader = null;
         try {
             JobConf conf = new JobConf(hadoopConf);
-            ParquetReader<GenericData.Record> reader = AvroParquetReader
+            reader = AvroParquetReader
                     .<GenericData.Record>builder(file)
                     .withDataModel(new GenericData())
                     .withConf(conf)
@@ -860,9 +861,18 @@ public class DFSUtil {
             if (reader.read() != null) {
                 return true;
             }
+
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
+        } finally {
+            if(reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    // omit
+                }
+            }
         }
         return false;
     }
