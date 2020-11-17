@@ -10,6 +10,7 @@ import com.alibaba.datax.plugin.unstructuredstorage.reader.UnstructuredStorageRe
 import com.alibaba.datax.plugin.unstructuredstorage.reader.UnstructuredStorageReaderUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import org.apache.avro.Conversions;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.commons.lang3.StringUtils;
@@ -735,7 +736,7 @@ public class DFSUtil {
             Path parquetFilePath = new Path(sourceParquestFilePath);
             try (ParquetReader<GenericData.Record> reader = AvroParquetReader
                     .<GenericData.Record>builder(parquetFilePath)
-                    .withDataModel( new GenericData())
+                    .withDataModel(new GenericData())
                     .withConf(conf)
                     .build()) {
                 GenericData.Record gRecord = reader.read();

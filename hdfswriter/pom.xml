@@ -90,6 +90,12 @@
             <groupId>com.alibaba.datax</groupId>
             <artifactId>plugin-unstructured-storage-util</artifactId>
             <version>${datax-project-version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.avro</groupId>
+                    <artifactId>avro</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
