@@ -174,8 +174,8 @@ public class DFSUtil {
                 LOG.info(String.format("[%s] 是目录, 递归获取该目录下的文件", f.getPath().toString()));
                 getHDFSAllFilesNORegex(f.getPath().toString(), hdfs);
             } else if (f.isFile()) {
-                if(f.getLen() == 0) {
-                    String message = String.format("该路径[%s]文件内容长度为0，插件自动忽略。", f.getPath().toString());
+                if(f.getLen() == 0 && specifiedFileType.equalsIgnoreCase(Constant.PARQUET)) {
+                    String message = String.format("该路径[%s]PARQUET文件内容长度为0，插件自动忽略。", f.getPath().toString());
                     LOG.info(message);
                 } else {
                     addSourceFileByType(f.getPath().toString());
