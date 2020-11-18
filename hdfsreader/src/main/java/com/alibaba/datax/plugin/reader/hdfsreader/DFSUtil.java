@@ -550,9 +550,9 @@ public class DFSUtil {
                 if (isSEQ) {
                     return false;
                 }
-                boolean isParquet = isParquetFile(file, in);//判断是否是 Parquet File
-                // 如果不是ORC,RC,PARQUET和SEQ,则默认为是TEXT或CSV类型
-                return !isParquet;
+                // boolean isParquet = isParquetFile(file, in);//判断是否是 Parquet File
+                // 如果不是ORC,RC和SEQ,则默认为是TEXT或CSV类型
+                return true;
 
             } else if (StringUtils.equalsIgnoreCase(specifiedFileType, Constant.ORC)) {
 
