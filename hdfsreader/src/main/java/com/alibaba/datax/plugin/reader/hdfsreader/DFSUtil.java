@@ -134,8 +134,8 @@ public class DFSUtil {
                 FileStatus stats[] = hdfs.globStatus(path);
                 for (FileStatus f : stats) {
                     if (f.isFile()) {
-                        if (f.getLen() == 0 && specifiedFileType.equalsIgnoreCase(Constant.PARQUET)) {
-                            String message = String.format("PARQUET文件[%s]长度为0，将会跳过不作处理！", hdfsPath);
+                        if (f.getLen() == 0) {
+                            String message = String.format("文件[%s]长度为0，将会跳过不作处理！", hdfsPath);
                             LOG.warn(message);
                         } else {
                             addSourceFileByType(f.getPath().toString());
