@@ -176,7 +176,7 @@ public class DFSUtil {
             } else if (f.isFile()) {
                 if(f.getLen() == 0) {
                     String message = String.format("该路径[%s]文件内容长度为0，插件自动忽略。", f.getPath().toString());
-                    LOG.info(message);
+                    LOG.warn(message);
                 } else {
                     addSourceFileByType(f.getPath().toString());
                 }
@@ -846,15 +846,24 @@ public class DFSUtil {
     }
 
     private boolean isParquetFile(Path file, FSDataInputStream in) {
+        ParquetReader<Group> reader = null;
         try {
             GroupReadSupport readSupport = new GroupReadSupport();
-            ParquetReader.Builder<Group> reader = ParquetReader.builder(readSupport, file);
-            ParquetReader<Group> build = reader.build();
-            if (build.read() != null) {
+            ParquetReader.Builder<Group> builder = ParquetReader.builder(readSupport, file);
+            reader = builder.build();
+            if (reader.read() != null) {
                 return true;
             }
         } catch (Exception e) {
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
+        } finally {
+            try {
+                if(reader != null) {
+                    reader.close();
+                }
+            } catch (Exception e) {
+
+            }
         }
         return false;
     }
