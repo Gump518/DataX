@@ -615,14 +615,14 @@ public  class HdfsHelper {
 
         for (Configuration column : columns) {
             if (column.getString("type").toUpperCase().contains("DECIMAL(")) {
-                strschema += " {\"name\": \"" + column.getString("name") + "\", \"default\": \"" + "\\N"
+                strschema += " {\"name\": \"" + column.getString("name") + "\", \"default\": \"" + ""
                         + "\", \"type\": {\"type\": \"fixed\", \"size\":16, \"logicalType\": \"decimal\", \"name\": \"decimal\", \"precision\": "
                         + getDecimalprec(column.getString("type")) + ", \"scale\":"
                         + getDecimalscale(column.getString("type")) + "}},";
             }
             else {
                 strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
-                        + column.getString("type") + "\", \"default\": \"" + "\\N" + "\"},";
+                        + column.getString("type") + "\", \"default\": \"" + "" + "\"},";
             }
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
