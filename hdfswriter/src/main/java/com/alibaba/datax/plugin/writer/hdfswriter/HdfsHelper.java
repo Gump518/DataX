@@ -638,7 +638,7 @@ public  class HdfsHelper {
                     .withSchema(parSchema)
                     .build();
 
-            CustomizeRecordBuilder builder = new CustomizeRecordBuilder(parSchema);
+            GenericRecordBuilder builder = new GenericRecordBuilder(parSchema);
             com.alibaba.datax.common.element.Record record;
             while ((record = lineReceiver.getFromReader()) != null) {
                 GenericRecord transportResult = transportParRecord(record, columns, taskPluginCollector, builder);
@@ -655,7 +655,7 @@ public  class HdfsHelper {
 
     public static GenericRecord transportParRecord(
             com.alibaba.datax.common.element.Record record, List<Configuration> columnsConfiguration,
-            TaskPluginCollector taskPluginCollector, CustomizeRecordBuilder builder) {
+            TaskPluginCollector taskPluginCollector, GenericRecordBuilder builder) {
 
         int recordLength = record.getColumnNumber();
         if (0 != recordLength) {
@@ -716,7 +716,7 @@ public  class HdfsHelper {
                         break;
                     }
                 } else {
-                    builder.set(colname, "");
+                    builder.set(colname, "-999999");
                 }
             }
         }
