@@ -664,12 +664,13 @@ public  class HdfsHelper {
                 column = record.getColumn(i);
                 String colname = columnsConfiguration.get(i).getString("name");
                 String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
+                if (typename.contains("DECIMAL(")) {
+                    typename = "DECIMAL";
+                }
+                SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
+
                 if(column.getRawData() != null) {
                     String rowData = column.getRawData().toString();
-                    if (typename.contains("DECIMAL(")) {
-                        typename = "DECIMAL";
-                    }
-                    SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
                     //根据writer端类型配置做类型转换
                     try {
                         switch (columnType) {
@@ -716,7 +717,13 @@ public  class HdfsHelper {
                         break;
                     }
                 } else {
-                    builder.set(colname, "-999999");
+                    switch (columnType) {
+                        case STRING:
+                            builder.set(colname, "");
+                            break;
+                        default:
+                            builder.set(colname, -99999);
+                    }
                 }
             }
         }
