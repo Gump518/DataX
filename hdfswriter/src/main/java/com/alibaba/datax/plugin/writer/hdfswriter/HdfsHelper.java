@@ -615,14 +615,13 @@ public  class HdfsHelper {
 
         for (Configuration column : columns) {
             if (column.getString("type").toUpperCase().contains("DECIMAL(")) {
-                strschema += " {\"name\": \"" + column.getString("name") + "\", \"default\": \"" + ""
+                strschema += " {\"name\": \"" + column.getString("name")
                         + "\", \"type\": {\"type\": \"fixed\", \"size\":16, \"logicalType\": \"decimal\", \"name\": \"decimal\", \"precision\": "
                         + getDecimalprec(column.getString("type")) + ", \"scale\":"
                         + getDecimalscale(column.getString("type")) + "}},";
-            }
-            else {
+            } else {
                 strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
-                        + column.getString("type") + "\", \"default\": \"" + "" + "\"},";
+                        + column.getString("type") + "\"},";
             }
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
@@ -639,7 +638,7 @@ public  class HdfsHelper {
                     .withSchema(parSchema)
                     .build();
 
-            GenericRecordBuilder builder = new GenericRecordBuilder(parSchema);
+            CustomizeRecordBuilder builder = new CustomizeRecordBuilder(parSchema);
             com.alibaba.datax.common.element.Record record;
             while ((record = lineReceiver.getFromReader()) != null) {
                 GenericRecord transportResult = transportParRecord(record, columns, taskPluginCollector, builder);
@@ -656,17 +655,17 @@ public  class HdfsHelper {
 
     public static GenericRecord transportParRecord(
             com.alibaba.datax.common.element.Record record, List<Configuration> columnsConfiguration,
-            TaskPluginCollector taskPluginCollector, GenericRecordBuilder builder) {
+            TaskPluginCollector taskPluginCollector, CustomizeRecordBuilder builder) {
 
         int recordLength = record.getColumnNumber();
         if (0 != recordLength) {
             Column column;
             for (int i = 0; i < recordLength; i++) {
                 column = record.getColumn(i);
+                String colname = columnsConfiguration.get(i).getString("name");
+                String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
                 if(column.getRawData() != null) {
                     String rowData = column.getRawData().toString();
-                    String colname = columnsConfiguration.get(i).getString("name");
-                    String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
                     if (typename.contains("DECIMAL(")) {
                         typename = "DECIMAL";
                     }
@@ -716,6 +715,8 @@ public  class HdfsHelper {
                         taskPluginCollector.collectDirtyRecord(record, message);
                         break;
                     }
+                } else {
+                    builder.set(colname, null);
                 }
             }
         }
