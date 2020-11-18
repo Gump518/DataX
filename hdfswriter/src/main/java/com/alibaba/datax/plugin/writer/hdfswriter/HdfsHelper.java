@@ -136,7 +136,7 @@ public  class HdfsHelper {
     }
 
     /**
-     * 获取以指定目录下的所有fileName开头的文件
+     * 获取以fileName__ 开头的文件列表
      * @param dir
      * @param fileName
      * @return
@@ -144,8 +144,16 @@ public  class HdfsHelper {
     public Path[] hdfsDirList(String dir,String fileName){
         Path path = new Path(dir);
         Path[] files;
+
         try {
-            FileStatus[] status = fileSystem.listStatus(path);
+            FileStatus[] status;
+            if(StringUtils.isNotBlank(fileName)) {
+                String filterFileName = fileName + "__*";
+                PathFilter pathFilter = new GlobFilter(filterFileName);
+                status = fileSystem.listStatus(path,pathFilter);
+            } else {
+                status = fileSystem.listStatus(path);
+            }
             files = new Path[status.length];
             for(int i=0;i<status.length;i++){
                 files[i] = status[i].getPath();
@@ -607,19 +615,18 @@ public  class HdfsHelper {
 
         for (Configuration column : columns) {
             if (column.getString("type").toUpperCase().contains("DECIMAL(")) {
-                strschema += " {\"name\": \"" + column.getString("name")
+                strschema += " {\"name\": \"" + column.getString("name") + "\", \"default\": \"" + "\\N"
                         + "\", \"type\": {\"type\": \"fixed\", \"size\":16, \"logicalType\": \"decimal\", \"name\": \"decimal\", \"precision\": "
                         + getDecimalprec(column.getString("type")) + ", \"scale\":"
                         + getDecimalscale(column.getString("type")) + "}},";
             }
             else {
                 strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
-                        + column.getString("type") + "\"},";
+                        + column.getString("type") + "\", \"default\": \"" + "\\N" + "\"},";
             }
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
         Schema.Parser parser = new Schema.Parser().setValidate(true);
-        parser.setValidateDefaults(false);
         Schema parSchema = parser.parse(strschema);
         org.apache.parquet.hadoop.metadata.CompressionCodecName codecName = CompressionCodecName.fromConf(compress);
         GenericData decimalSupport = new GenericData();
@@ -657,14 +664,13 @@ public  class HdfsHelper {
             for (int i = 0; i < recordLength; i++) {
                 column = record.getColumn(i);
                 if(column.getRawData() != null) {
+                    String rowData = column.getRawData().toString();
                     String colname = columnsConfiguration.get(i).getString("name");
                     String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
                     if (typename.contains("DECIMAL(")) {
                         typename = "DECIMAL";
                     }
                     SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
-                    String rowData = column.getRawData().toString();
-
                     //根据writer端类型配置做类型转换
                     try {
                         switch (columnType) {
