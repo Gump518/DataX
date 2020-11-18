@@ -551,11 +551,8 @@ public class DFSUtil {
                     return false;
                 }
                 boolean isParquet = isParquetFile(file, in);//判断是否是 Parquet File
-                if (isParquet) {
-                    return false;
-                }
-                // 如果不是ORC,RC和SEQ,则默认为是TEXT或CSV类型
-                return !isORC && !isRC && !isSEQ && !isParquet;
+                // 如果不是ORC,RC,PARQUET和SEQ,则默认为是TEXT或CSV类型
+                return !isParquet;
 
             } else if (StringUtils.equalsIgnoreCase(specifiedFileType, Constant.ORC)) {
 
@@ -617,7 +614,7 @@ public class DFSUtil {
                     return true;
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.info(String.format("检查文件类型: [%s] 不是ORC File.", file.toString()));
         }
         return false;
@@ -683,7 +680,7 @@ public class DFSUtil {
                 }
             }
             return true;
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.info(String.format("检查文件类型: [%s] 不是RC File.", filepath));
         }
         return false;
@@ -701,7 +698,7 @@ public class DFSUtil {
             } else {
                 return false;
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.info(String.format("检查文件类型: [%s] 不是Sequence File.", filepath));
         }
         return false;
@@ -849,28 +846,15 @@ public class DFSUtil {
     }
 
     private boolean isParquetFile(Path file, FSDataInputStream in) {
-        ParquetReader<GenericData.Record> reader = null;
         try {
-            JobConf conf = new JobConf(hadoopConf);
-            reader = AvroParquetReader
-                    .<GenericData.Record>builder(file)
-                    .withDataModel(new GenericData())
-                    .withConf(conf)
-                    .build();
-            if (reader.read() != null) {
+            GroupReadSupport readSupport = new GroupReadSupport();
+            ParquetReader.Builder<Group> reader = ParquetReader.builder(readSupport, file);
+            ParquetReader<Group> build = reader.build();
+            if (build.read() != null) {
                 return true;
             }
-
         } catch (Exception e) {
             LOG.info("检查文件类型: [{}] 不是Parquet File.", file);
-        } finally {
-            if(reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    // omit
-                }
-            }
         }
         return false;
     }
