@@ -617,7 +617,7 @@ public class DFSUtil {
                     return true;
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.info(String.format("检查文件类型: [%s] 不是ORC File.", file.toString()));
         }
         return false;
@@ -683,7 +683,7 @@ public class DFSUtil {
                 }
             }
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.info(String.format("检查文件类型: [%s] 不是RC File.", filepath));
         }
         return false;
@@ -701,7 +701,7 @@ public class DFSUtil {
             } else {
                 return false;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.info(String.format("检查文件类型: [%s] 不是Sequence File.", filepath));
         }
         return false;
