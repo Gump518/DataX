@@ -716,7 +716,7 @@ public  class HdfsHelper {
                         break;
                     }
                 } else {
-                    builder.set(colname, null);
+                    builder.set(colname, "");
                 }
             }
         }
