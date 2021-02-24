@@ -614,14 +614,22 @@ public  class HdfsHelper {
                 + "\"fields\": [";
 
         for (Configuration column : columns) {
-            if (column.getString("type").toUpperCase().contains("DECIMAL(")) {
+            String typeUp = column.getString("type").toUpperCase();
+
+            if (typeUp.contains("DECIMAL(")) {
                 strschema += " {\"name\": \"" + column.getString("name")
                         + "\", \"type\": {\"type\": \"fixed\", \"size\":16, \"logicalType\": \"decimal\", \"name\": \"decimal\", \"precision\": "
                         + getDecimalprec(column.getString("type")) + ", \"scale\":"
                         + getDecimalscale(column.getString("type")) + "}},";
             } else {
-                strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
-                        + column.getString("type") + "\"},";
+                // 兼容空值
+                if(typeUp.contains("[")) { // 复合类型
+                    strschema += " {\"name\": \"" + column.getString("name") + "\",\"type\": "
+                            + column.getString("type") + "},";
+                } else {
+                    strschema += " {\"name\": \"" + column.getString("name") + "\", \"type\": \""
+                            + column.getString("type") + "\"},";
+                }
             }
         }
         strschema = strschema.substring(0, strschema.length() - 1) + " ]}";
@@ -663,10 +671,7 @@ public  class HdfsHelper {
             for (int i = 0; i < recordLength; i++) {
                 column = record.getColumn(i);
                 String colname = columnsConfiguration.get(i).getString("name");
-                String typename = columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase();
-                if (typename.contains("DECIMAL(")) {
-                    typename = "DECIMAL";
-                }
+                String typename = getNewTypeName(columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase());
                 SupportHiveDataType columnType = SupportHiveDataType.valueOf(typename);
 
                 if(column.getRawData() != null) {
@@ -722,7 +727,7 @@ public  class HdfsHelper {
                             builder.set(colname, "");
                             break;
                         default:
-                            builder.set(colname, -99999);
+                            builder.set(colname, null);
                     }
                 }
             }
@@ -742,5 +747,29 @@ public  class HdfsHelper {
         Pattern p = Pattern.compile(regEx);
         Matcher m = p.matcher(type);
         return m.replaceAll(" ").trim().split(" ")[1];
+    }
+
+    private static String getNewTypeName(String oldTypeName) {
+        String typename = oldTypeName;
+        if (typename.contains("DECIMAL(")) {
+            typename = "DECIMAL";
+        } else {
+            if(typename.contains("[") && typename.contains("]")) {
+                typename = typename.replace("[", "")
+                                   .replace("]", "")
+                                   .replace("\"","");
+                String[] tps = typename.split(",");
+                for(String tp : tps) {
+                    if(!"NULL".equals(tp)) {
+                        typename = tp;break;
+                    }
+                }
+            }
+        }
+        return typename.trim();
+    }
+
+    public static void main(String[] args) {
+        System.out.println(getNewTypeName("[\"null\", \"string\"]".toUpperCase()));
     }
 }
